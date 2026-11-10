@@ -4,10 +4,13 @@ An unofficial, local-only desktop widget and command-line report for token usage
 
 ## Features
 
-- A minimal desktop widget with only a cute moon-cat avatar and the all-session token total
+- A minimal desktop widget with only an animated moon-cat avatar and the all-session token total
+- Breathing, bobbing, random blinking, and eyes that follow the mouse pointer
+- Happy reactions on hover, floating hearts when petted, and a surprised expression while dragged
+- Gentle wandering near its current spot, with an option to turn wandering off
 - Includes main-agent and subagent usage
 - Refreshes automatically without blocking the interface
-- Draws the avatar with Tkinter, with no image assets or extra dependencies
+- Draws and animates the avatar with Tkinter, with no image assets or extra dependencies
 - Exports detailed per-session reports as text, JSON, or CSV
 - Uses only the Python standard library
 
@@ -27,7 +30,16 @@ cd kimi-token-widget
 python token_widget.py
 ```
 
-The widget updates every 15 seconds. Drag anywhere to move it, double-click the avatar to refresh, and right-click for always-on-top, refresh, and close options. Press `Esc` to close it.
+The token count updates every 15 seconds.
+
+Interactions:
+
+- Hover over the avatar to excite it
+- Click the avatar to pet it
+- Drag anywhere to move the widget
+- Double-click the avatar to refresh the token count
+- Right-click to toggle always-on-top or wandering, refresh, or close
+- Press `Esc` to close
 
 Optional settings:
 
