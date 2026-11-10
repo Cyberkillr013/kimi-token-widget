@@ -12,13 +12,24 @@ from tkinter import font
 from token_usage import collect_sessions, summarize
 
 
-def draw_avatar(canvas, look_x=0, look_y=0, blink=False, happy=False, grabbed=False, heart_offset=0):
+def star_points(center_x, center_y, outer_radius, inner_radius=None):
+    inner_radius = inner_radius or outer_radius * 0.45
+    points = []
+    for index in range(10):
+        angle = -math.pi / 2 + index * math.pi / 5
+        radius = outer_radius if index % 2 == 0 else inner_radius
+        points.extend((center_x + math.cos(angle) * radius, center_y + math.sin(angle) * radius))
+    return points
+
+
+def draw_avatar(canvas, look_x=0, look_y=0, blink=False, mood="normal", heart_offset=None, action_progress=0):
     purple = "#8b7cff"
     light_purple = "#b9b0ff"
     face = "#c9c2ff"
     dark = "#28223f"
     pink = "#ff9ebd"
     gold = "#ffe59a"
+    happy = mood in ("happy", "pet", "snack", "play", "excited")
 
     canvas.create_polygon(12, 21, 16, 5, 29, 16, fill=purple, outline=light_purple, width=2)
     canvas.create_polygon(36, 16, 49, 5, 53, 22, fill=purple, outline=light_purple, width=2)
@@ -27,17 +38,19 @@ def draw_avatar(canvas, look_x=0, look_y=0, blink=False, happy=False, grabbed=Fa
     canvas.create_oval(7, 10, 57, 60, fill=purple, outline=light_purple, width=2)
     canvas.create_oval(14, 20, 50, 55, fill=face, outline="")
 
-    canvas.create_polygon(
-        32, 15, 34, 19, 38, 19, 35, 22, 36, 26, 32, 23.5, 28, 26, 29, 22, 26, 19, 30, 19,
-        fill=gold,
-        outline="",
-    )
-    canvas.create_polygon(54, 3, 55.5, 7, 59, 7, 56.5, 9, 57.5, 13, 54, 10.5, 50.5, 13, 51.5, 9, 49, 7, 52.5, 7, fill=gold, outline="")
+    canvas.create_polygon(star_points(32, 20, 6, 2.4), fill=gold, outline="")
+    canvas.create_polygon(star_points(54, 8, 5, 1.8), fill=gold, outline="")
     canvas.create_oval(3, 32, 6, 35, fill=gold, outline="")
 
-    if grabbed:
+    if mood == "grabbed":
         canvas.create_line(20, 30, 25, 32, 20, 34, fill=dark, width=2)
         canvas.create_line(44, 30, 39, 32, 44, 34, fill=dark, width=2)
+    elif mood == "sleepy":
+        canvas.create_line(20, 31, 23, 33, 26, 31, fill=dark, width=2, smooth=True)
+        canvas.create_line(38, 31, 41, 33, 44, 31, fill=dark, width=2, smooth=True)
+    elif mood in ("play", "excited"):
+        canvas.create_polygon(star_points(23, 32, 4.5, 1.8), fill=dark, outline="")
+        canvas.create_polygon(star_points(41, 32, 4.5, 1.8), fill=dark, outline="")
     elif happy:
         canvas.create_line(20, 33, 23, 30, 26, 33, fill=dark, width=2, smooth=True)
         canvas.create_line(38, 33, 41, 30, 44, 33, fill=dark, width=2, smooth=True)
@@ -52,11 +65,13 @@ def draw_avatar(canvas, look_x=0, look_y=0, blink=False, happy=False, grabbed=Fa
 
     canvas.create_oval(16, 38, 23, 42, fill=pink, outline="")
     canvas.create_oval(41, 38, 48, 42, fill=pink, outline="")
-    if happy:
+    if mood == "grabbed":
+        canvas.create_oval(30, 39, 34, 44, fill=dark, outline="")
+    elif mood == "sleepy":
+        canvas.create_line(30, 42, 34, 42, fill=dark, width=2)
+    elif happy:
         canvas.create_oval(28, 38, 36, 47, fill=dark, outline="")
         canvas.create_oval(30, 43, 34, 46, fill=pink, outline="")
-    elif grabbed:
-        canvas.create_oval(30, 39, 34, 44, fill=dark, outline="")
     else:
         canvas.create_oval(30, 36, 34, 39, fill=dark, outline="")
         canvas.create_line(28, 40, 30, 42, 32, 43, 34, 42, 36, 40, fill=dark, width=2, smooth=True)
@@ -66,9 +81,27 @@ def draw_avatar(canvas, look_x=0, look_y=0, blink=False, happy=False, grabbed=Fa
     canvas.create_line(44, 42, 51, 43, fill=dark, width=1)
     canvas.create_line(43, 44, 50, 47, fill=dark, width=1)
 
+    if mood == "sleepy":
+        canvas.create_text(51, 19, text="Z", fill=light_purple, font=("Segoe UI", 11, "bold"), tags="sleep")
+        canvas.create_text(58, 9, text="z", fill=gold, font=("Segoe UI", 9, "bold"), tags="sleep")
+    if mood == "snack":
+        cookie_x = 53 - action_progress * 17
+        cookie_y = 44 - action_progress * 4
+        radius = max(2.5, 6 - action_progress * 3)
+        canvas.create_oval(cookie_x - radius, cookie_y - radius, cookie_x + radius, cookie_y + radius, fill="#d99b5f", outline="#8b5737", tags="snack")
+        canvas.create_oval(cookie_x - 2, cookie_y - 2, cookie_x, cookie_y, fill="#5e3b32", outline="", tags="snack")
+        canvas.create_oval(cookie_x + 1, cookie_y + 1, cookie_x + 3, cookie_y + 3, fill="#5e3b32", outline="", tags="snack")
+    if mood == "play":
+        ball_x = 51 + math.sin(action_progress * math.pi * 4) * 5
+        ball_y = 8 + abs(math.sin(action_progress * math.pi * 5)) * 14
+        canvas.create_oval(ball_x - 5, ball_y - 5, ball_x + 5, ball_y + 5, fill=pink, outline=gold, width=2, tags="play")
+        canvas.create_line(ball_x - 4, ball_y, ball_x + 4, ball_y, fill=gold, width=2, tags="play")
+    if mood == "excited":
+        canvas.create_text(8, 17, text="✦", fill=gold, font=("Segoe UI", 12, "bold"), tags="excited")
+        canvas.create_text(56, 30, text="✦", fill=pink, font=("Segoe UI", 10, "bold"), tags="excited")
     if heart_offset is not None:
-        canvas.create_text(53, 19 - heart_offset, text="♥", fill=pink, font=("Segoe UI", 12, "bold"))
-        canvas.create_text(10, 17 - heart_offset / 2, text="♥", fill=gold, font=("Segoe UI", 9, "bold"))
+        canvas.create_text(53, 19 - heart_offset, text="♥", fill=pink, font=("Segoe UI", 12, "bold"), tags="pet")
+        canvas.create_text(10, 17 - heart_offset / 2, text="♥", fill=gold, font=("Segoe UI", 9, "bold"), tags="pet")
 
 
 def transform_avatar(canvas, scale, offset_x, offset_y):
@@ -96,8 +129,12 @@ class TokenWidget:
         self.hovering = False
         self.dragging = False
         self.drag_moved = False
-        self.pet_until = 0
+        self.action = None
+        self.action_until = 0
+        self.action_duration = 1
+        self.sleeping = False
         now = time.monotonic()
+        self.last_interaction = now
         self.next_blink = now + random.uniform(2, 5)
         self.blink_until = 0
         self.next_wander = now + 3
@@ -140,12 +177,15 @@ class TokenWidget:
         )
         self.menu.add_checkbutton(label="Always on top", variable=self.topmost, command=self.toggle_topmost)
         self.menu.add_checkbutton(label="Wander nearby", variable=self.wandering, command=self.toggle_wandering)
-        self.menu.add_command(label="Refresh now", command=self.refresh)
+        self.menu.add_command(label="Give a snack", command=self.feed)
+        self.menu.add_command(label="Play together", command=self.play)
+        self.menu.add_command(label="Sleep / wake up", command=self.toggle_sleep)
+        self.menu.add_command(label="Refresh now", command=self.manual_refresh)
         self.menu.add_separator()
         self.menu.add_command(label="Close", command=self.close)
         root.bind_all("<Button-3>", self.show_menu)
         root.bind("<Escape>", lambda event: self.close())
-        self.avatar.bind("<Double-Button-1>", lambda event: self.refresh())
+        self.avatar.bind("<Double-Button-1>", lambda event: self.manual_refresh())
         self.avatar.bind("<Enter>", lambda event: self.set_hover(True))
         self.avatar.bind("<Leave>", lambda event: self.set_hover(False))
 
@@ -166,6 +206,10 @@ class TokenWidget:
             return
         self.loading = True
         threading.Thread(target=self.load_usage, daemon=True).start()
+
+    def manual_refresh(self):
+        self.start_action("excited", 1.2)
+        self.refresh()
 
     def load_usage(self):
         try:
@@ -199,43 +243,71 @@ class TokenWidget:
         if now >= self.next_blink:
             self.blink_until = now + 0.14
             self.next_blink = now + random.uniform(2.5, 5.5)
+        if self.action and now >= self.action_until:
+            self.action = None
 
-        petting = now < self.pet_until
-        happy = self.hovering or petting
+        current_action = self.action
+        sleepy = self.sleeping or (
+            now - self.last_interaction >= 45 and not self.hovering and not current_action
+        )
+        if self.dragging and self.drag_moved:
+            mood = "grabbed"
+        elif current_action:
+            mood = current_action
+        elif sleepy:
+            mood = "sleepy"
+        elif self.hovering:
+            mood = "happy"
+        else:
+            mood = "normal"
+
         pointer_x, pointer_y = self.root.winfo_pointerxy()
         relative_x = pointer_x - self.avatar.winfo_rootx() - 32
         relative_y = pointer_y - self.avatar.winfo_rooty() - 32
         look_x = max(-1.8, min(1.8, relative_x / 35))
         look_y = max(-1.5, min(1.5, relative_y / 40))
 
-        if petting:
+        if current_action == "play":
+            offset_x = math.sin(now * 8) * 2
+            offset_y = -abs(math.sin(now * 10)) * 4
+        elif current_action == "excited":
+            offset_x = 0
+            offset_y = -abs(math.sin(now * 12)) * 3
+        elif current_action == "pet":
             offset_x = math.sin(now * 18) * 1.2
             offset_y = -abs(math.sin(now * 9)) * 2.5
+        elif current_action == "snack":
+            offset_x = 0
+            offset_y = math.sin(now * 8) * 0.8
+        elif sleepy:
+            offset_x = 0
+            offset_y = math.sin(now * 1.2) * 0.6
         elif self.hovering:
             offset_x = 0
             offset_y = math.sin(now * 6) * 1.8
         else:
             offset_x = 0
             offset_y = math.sin(now * 2.4) * 1.2
-        scale = 1 + math.sin(now * 2.4) * 0.015
-        heart_offset = (1.4 - (self.pet_until - now)) * 7 if petting else None
+        scale = 1 + math.sin(now * (10 if current_action == "snack" else 2.4)) * 0.015
+        heart_offset = (1.4 - (self.action_until - now)) * 7 if current_action == "pet" else None
+        action_progress = 1 - (self.action_until - now) / self.action_duration if current_action else 0
 
         self.avatar.delete("all")
         draw_avatar(
             self.avatar,
             look_x,
             look_y,
-            blink=now < self.blink_until and not happy,
-            happy=happy,
-            grabbed=self.dragging and self.drag_moved,
+            blink=now < self.blink_until and mood == "normal",
+            mood=mood,
             heart_offset=heart_offset,
+            action_progress=action_progress,
         )
         transform_avatar(self.avatar, scale, offset_x, offset_y)
-        self.update_wander(now)
+        self.update_wander(now, paused=sleepy or current_action in ("play", "snack"))
         self.root.after(70, self.animate)
 
-    def update_wander(self, now):
-        if not self.wandering.get() or self.dragging:
+    def update_wander(self, now, paused=False):
+        if paused or not self.wandering.get() or self.dragging:
             self.wander_target = None
             self.next_wander = now + 2
             return
@@ -257,13 +329,34 @@ class TokenWidget:
             else:
                 self.root.geometry(f"+{round(current_x + difference_x * 0.08)}+{round(current_y + difference_y * 0.08)}")
 
+    def start_action(self, action, duration):
+        now = time.monotonic()
+        self.action = action
+        self.action_until = now + duration
+        self.action_duration = duration
+        self.sleeping = False
+        self.last_interaction = now
+        self.next_blink = now + duration
+
     def set_hover(self, hovering):
         self.hovering = hovering
+        if hovering:
+            self.sleeping = False
+            self.last_interaction = time.monotonic()
 
     def pet(self):
-        now = time.monotonic()
-        self.pet_until = now + 1.4
-        self.next_blink = now + 1.5
+        self.start_action("pet", 1.4)
+
+    def feed(self):
+        self.start_action("snack", 2.4)
+
+    def play(self):
+        self.start_action("play", 3)
+
+    def toggle_sleep(self):
+        self.sleeping = not self.sleeping
+        self.action = None
+        self.last_interaction = time.monotonic()
 
     def toggle_topmost(self):
         self.root.attributes("-topmost", self.topmost.get())
@@ -274,6 +367,7 @@ class TokenWidget:
         self.next_wander = time.monotonic() + 2
 
     def show_menu(self, event):
+        self.last_interaction = time.monotonic()
         try:
             self.menu.tk_popup(event.x_root, event.y_root)
         finally:
@@ -282,6 +376,9 @@ class TokenWidget:
     def start_drag(self, event):
         self.dragging = True
         self.drag_moved = False
+        self.action = None
+        self.sleeping = False
+        self.last_interaction = time.monotonic()
         self.press_position = (event.x_root, event.y_root)
         self.drag_x = event.x_root - self.root.winfo_x()
         self.drag_y = event.y_root - self.root.winfo_y()
