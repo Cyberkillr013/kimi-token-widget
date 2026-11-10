@@ -4,12 +4,11 @@ An unofficial, local-only desktop widget and command-line report for token usage
 
 ## Features
 
-- Shows total token usage across all local sessions
-- Shows the latest session's token count
-- Breaks down regular input, cached input, cache creation, and output tokens
+- A minimal desktop widget with only a cute moon-cat avatar and the all-session token total
 - Includes main-agent and subagent usage
 - Refreshes automatically without blocking the interface
-- Exports per-session reports as text, JSON, or CSV
+- Draws the avatar with Tkinter, with no image assets or extra dependencies
+- Exports detailed per-session reports as text, JSON, or CSV
 - Uses only the Python standard library
 
 ## Requirements
@@ -28,7 +27,7 @@ cd kimi-token-widget
 python token_widget.py
 ```
 
-The widget updates every 15 seconds. Drag its title bar to move it, right-click to toggle always-on-top, and use the refresh button to update immediately.
+The widget updates every 15 seconds. Drag anywhere to move it, double-click the avatar to refresh, and right-click for always-on-top, refresh, and close options. Press `Esc` to close it.
 
 Optional settings:
 

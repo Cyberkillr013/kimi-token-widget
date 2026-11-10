@@ -3,21 +3,47 @@ import os
 import queue
 import threading
 import tkinter as tk
-from datetime import datetime
 from pathlib import Path
 from tkinter import font
 
 from token_usage import collect_sessions, summarize
 
 
-def compact_number(value):
-    if value >= 1_000_000_000:
-        return f"{value / 1_000_000_000:.2f}B"
-    if value >= 1_000_000:
-        return f"{value / 1_000_000:.2f}M"
-    if value >= 1_000:
-        return f"{value / 1_000:.1f}K"
-    return str(value)
+def draw_avatar(canvas):
+    purple = "#8b7cff"
+    light_purple = "#b9b0ff"
+    face = "#c9c2ff"
+    dark = "#28223f"
+    pink = "#ff9ebd"
+    gold = "#ffe59a"
+
+    canvas.create_polygon(12, 21, 16, 5, 29, 16, fill=purple, outline=light_purple, width=2)
+    canvas.create_polygon(36, 16, 49, 5, 53, 22, fill=purple, outline=light_purple, width=2)
+    canvas.create_polygon(16, 15, 18, 9, 24, 15, fill=pink, outline="")
+    canvas.create_polygon(41, 15, 47, 9, 49, 16, fill=pink, outline="")
+    canvas.create_oval(7, 10, 57, 60, fill=purple, outline=light_purple, width=2)
+    canvas.create_oval(14, 20, 50, 55, fill=face, outline="")
+
+    canvas.create_polygon(
+        32, 15, 34, 19, 38, 19, 35, 22, 36, 26, 32, 23.5, 28, 26, 29, 22, 26, 19, 30, 19,
+        fill=gold,
+        outline="",
+    )
+    canvas.create_polygon(54, 3, 55.5, 7, 59, 7, 56.5, 9, 57.5, 13, 54, 10.5, 50.5, 13, 51.5, 9, 49, 7, 52.5, 7, fill=gold, outline="")
+    canvas.create_oval(3, 32, 6, 35, fill=gold, outline="")
+
+    canvas.create_oval(21, 29, 26, 35, fill=dark, outline="")
+    canvas.create_oval(38, 29, 43, 35, fill=dark, outline="")
+    canvas.create_oval(22, 30, 24, 32, fill="white", outline="")
+    canvas.create_oval(39, 30, 41, 32, fill="white", outline="")
+    canvas.create_oval(16, 38, 23, 42, fill=pink, outline="")
+    canvas.create_oval(41, 38, 48, 42, fill=pink, outline="")
+    canvas.create_oval(30, 36, 34, 39, fill=dark, outline="")
+    canvas.create_line(28, 40, 30, 42, 32, 43, 34, 42, 36, 40, fill=dark, width=2, smooth=True)
+    canvas.create_line(13, 43, 20, 42, fill=dark, width=1)
+    canvas.create_line(14, 47, 21, 44, fill=dark, width=1)
+    canvas.create_line(44, 42, 51, 43, fill=dark, width=1)
+    canvas.create_line(43, 44, 50, 47, fill=dark, width=1)
 
 
 class TokenWidget:
@@ -33,8 +59,6 @@ class TokenWidget:
         self.background = "#10141f"
         self.panel = "#181e2b"
         self.foreground = "#f3f6fc"
-        self.muted = "#93a0b8"
-        self.accent = "#8b7cff"
 
         root.title("Kimi Token Usage")
         root.overrideredirect(True)
@@ -42,118 +66,59 @@ class TokenWidget:
         root.configure(bg=self.background, highlightbackground="#30394d", highlightthickness=1)
         root.resizable(False, False)
 
-        width, height = 370, 250
+        width, height = 300, 104
         x = root.winfo_screenwidth() - width - 28
         y = root.winfo_screenheight() - height - 76
         root.geometry(f"{width}x{height}+{max(x, 0)}+{max(y, 0)}")
 
-        self.ui_font = font.Font(family="Segoe UI", size=10)
-        self.total_font = font.Font(family="Segoe UI", size=25, weight="bold")
-        self.heading_font = font.Font(family="Segoe UI", size=10, weight="bold")
-
-        self.total = tk.StringVar(value="—")
-        self.session_count = tk.StringVar(value="Reading local sessions…")
-        self.breakdown = tk.StringVar(value="")
-        self.latest = tk.StringVar(value="—")
-        self.latest_title = tk.StringVar(value="Latest session")
-        self.status = tk.StringVar(value="")
-
-        header = tk.Frame(root, bg=self.background)
-        header.pack(fill="x", padx=14, pady=(10, 4))
-        title = tk.Label(
-            header,
-            text="KIMI TOKEN USAGE",
-            bg=self.background,
-            fg=self.accent,
-            font=self.heading_font,
-        )
-        title.pack(side="left")
-        self.make_button(header, "×", self.close, 12).pack(side="right")
-        self.make_button(header, "↻", self.refresh, 11).pack(side="right", padx=(0, 8))
+        self.total_font = font.Font(family="Segoe UI", size=20, weight="bold")
+        self.total = tk.StringVar(value="…")
 
         main = tk.Frame(root, bg=self.panel)
-        main.pack(fill="both", expand=True, padx=10, pady=(0, 8))
+        main.pack(fill="both", expand=True, padx=7, pady=7)
 
-        tk.Label(main, text="ALL SESSIONS", bg=self.panel, fg=self.muted, font=self.ui_font).pack(
-            anchor="w", padx=12, pady=(9, 0)
-        )
-        tk.Label(main, textvariable=self.total, bg=self.panel, fg=self.foreground, font=self.total_font).pack(
-            anchor="w", padx=12
-        )
-        tk.Label(main, textvariable=self.session_count, bg=self.panel, fg=self.muted, font=self.ui_font).pack(
-            anchor="w", padx=12
-        )
-        tk.Label(main, textvariable=self.breakdown, bg=self.panel, fg=self.muted, font=self.ui_font).pack(
-            anchor="w", padx=12, pady=(3, 8)
-        )
+        avatar = tk.Canvas(main, width=64, height=64, bg=self.panel, highlightthickness=0, cursor="hand2")
+        avatar.pack(side="left", padx=(7, 13))
+        draw_avatar(avatar)
+        total_label = tk.Label(main, textvariable=self.total, bg=self.panel, fg=self.foreground, font=self.total_font)
+        total_label.pack(side="left", fill="x", expand=True, padx=(0, 9))
 
-        latest_row = tk.Frame(main, bg=self.panel)
-        latest_row.pack(fill="x", padx=12, pady=(0, 8))
-        latest_text = tk.Frame(latest_row, bg=self.panel)
-        latest_text.pack(side="left", fill="x", expand=True)
-        tk.Label(
-            latest_text,
-            textvariable=self.latest_title,
-            bg=self.panel,
-            fg=self.muted,
-            font=self.ui_font,
-        ).pack(anchor="w")
-        tk.Label(
-            latest_row,
-            textvariable=self.latest,
+        self.menu = tk.Menu(
+            root,
+            tearoff=False,
             bg=self.panel,
             fg=self.foreground,
-            font=self.heading_font,
-        ).pack(side="right")
-
-        tk.Label(root, textvariable=self.status, bg=self.background, fg=self.muted, font=self.ui_font).pack(
-            pady=(0, 7)
+            activebackground="#30394d",
+            activeforeground=self.foreground,
         )
-
-        self.menu = tk.Menu(root, tearoff=False, bg=self.panel, fg=self.foreground, activebackground="#30394d")
         self.menu.add_checkbutton(label="Always on top", variable=self.topmost, command=self.toggle_topmost)
         self.menu.add_command(label="Refresh now", command=self.refresh)
         self.menu.add_separator()
         self.menu.add_command(label="Close", command=self.close)
         root.bind_all("<Button-3>", self.show_menu)
+        root.bind("<Escape>", lambda event: self.close())
+        avatar.bind("<Double-Button-1>", lambda event: self.refresh())
 
-        for widget in (header, title):
+        for widget in (root, main, avatar, total_label):
             widget.bind("<ButtonPress-1>", self.start_drag)
             widget.bind("<B1-Motion>", self.drag)
 
         root.after(0, self.refresh)
         root.after(100, self.process_results)
 
-    def make_button(self, parent, text, command, size):
-        return tk.Button(
-            parent,
-            text=text,
-            command=command,
-            bg=self.background,
-            fg=self.muted,
-            activebackground=self.background,
-            activeforeground=self.foreground,
-            font=font.Font(family="Segoe UI", size=size),
-            borderwidth=0,
-            cursor="hand2",
-            width=2,
-        )
-
     def refresh(self):
-        if self.loading or self.closed:
+        if self.closed:
+            return
+        self.root.after(self.refresh_seconds * 1000, self.refresh)
+        if self.loading:
             return
         self.loading = True
-        self.status.set("Refreshing…")
         threading.Thread(target=self.load_usage, daemon=True).start()
-        if not self.closed:
-            self.root.after(self.refresh_seconds * 1000, self.refresh)
 
     def load_usage(self):
         try:
-            sessions = collect_sessions(self.data_root)
-            summary = summarize(sessions)
-            latest = next((session for session in sessions if session["usageRecords"]), None)
-            self.results.put(("ok", summary, latest, datetime.now()))
+            summary = summarize(collect_sessions(self.data_root))
+            self.results.put(("ok", summary))
         except Exception as error:
             self.results.put(("error", str(error)))
 
@@ -165,27 +130,12 @@ class TokenWidget:
                 result = self.results.get_nowait()
                 self.loading = False
                 if result[0] == "error":
-                    self.status.set(f"Error: {result[1]}")
+                    self.total.set("Unavailable")
+                    self.total_font.configure(size=18)
                     continue
-                _, summary, latest, updated_at = result
-                usage = summary["usage"]
-                self.total.set(f"{summary['totalTokens']:,}")
-                self.session_count.set(
-                    f"{summary['sessions']} sessions · {summary['sessionsWithUsage']} with usage"
-                )
-                self.breakdown.set(
-                    f"Input {compact_number(usage['inputOther'])}  ·  "
-                    f"Cached {compact_number(usage['inputCacheRead'])}  ·  "
-                    f"Output {compact_number(usage['output'])}"
-                )
-                if latest:
-                    session_id = latest["sessionId"].removeprefix("session_")[:8]
-                    self.latest_title.set(f"Latest session · {session_id}")
-                    self.latest.set(f"{latest['totalTokens']:,}")
-                else:
-                    self.latest_title.set("Latest session")
-                    self.latest.set("No usage")
-                self.status.set(f"Updated {updated_at:%H:%M:%S} · every {self.refresh_seconds}s")
+                total = f"{result[1]['totalTokens']:,}"
+                self.total.set(total)
+                self.total_font.configure(size=20 if len(total) <= 13 else 17)
         except queue.Empty:
             pass
         self.root.after(100, self.process_results)
